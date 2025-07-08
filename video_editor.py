@@ -169,118 +169,120 @@ def generate_preview_frame(base_image, logo_file, overlay_file, caption_file, **
 
 
 # --- Layout da Interface ---
-controls_col, preview_col = st.columns([3, 2])
 
-with controls_col:
-    st.header("1. Controles")
-
-    with st.expander("Arquivos", expanded=True):
-        uploaded_logo = st.file_uploader("Logo (PNG)", type="png")
-        uploaded_overlay = st.file_uploader("Imagem de Sobreposição (PNG)", type="png")
-        uploaded_images_raw = st.file_uploader("Imagens de Fundo (JPG/PNG)", type=["jpg", "png"], accept_multiple_files=True)
+# Seção 1: Upload de Arquivos
+with st.container():
+    st.header("1. Arquivos")
+    uploader_cols = st.columns(3)
+    with uploader_cols[0]:
+        uploaded_images_raw = st.file_uploader("Imagens de Fundo", type=["jpg", "png"], accept_multiple_files=True)
         uploaded_images = sort_images_numerically(uploaded_images_raw)
-        uploaded_captions = st.file_uploader("Arquivo de Legendas (.txt)", type="txt")
-        uploaded_audio = st.file_uploader("Trilha Sonora (MP3/WAV)", type=["mp3", "wav"])
+    with uploader_cols[1]:
+        uploaded_logo = st.file_uploader("Logo", type="png")
+        uploaded_overlay = st.file_uploader("Sobreposição", type="png")
+    with uploader_cols[2]:
+        uploaded_captions = st.file_uploader("Legendas", type="txt")
+        uploaded_audio = st.file_uploader("Áudio", type=["mp3", "wav"])
 
-    with st.expander("Configurações Gerais", expanded=True):
-        total_duration = st.slider("Duração total do Reel (segundos)", 15, 90, 15)
-        image_duration = st.number_input("Duração de cada imagem (segundos)", min_value=0.1, value=2.0, step=0.1)
+# Seção 2: Controles e Preview
+with st.container():
+    controls_col, preview_col = st.columns([3, 2])
 
-    with st.expander("Opções da Logo"):
-        if uploaded_logo:
-            logo_x = st.slider("Posição X da Logo", 0, 1080, 50)
-            logo_y = st.slider("Posição Y da Logo", 0, 1920, 50)
-            logo_size = st.slider("Tamanho da Logo", 0.1, 2.0, 0.5, 0.1)
-            logo_opacity = st.slider("Transparência da Logo", 0.0, 1.0, 1.0, 0.1)
+    with controls_col:
+        st.header("2. Controles")
+        
+        # Definir a fonte padrão aqui para que ela sempre exista no escopo
+        caption_font = "Liberation-Sans-Bold"
 
-    with st.expander("Opções da Sobreposição"):
-        if uploaded_overlay:
-            overlay_x = st.slider("Posição X da Sobreposição", 0, 1080, 800)
-            overlay_y = st.slider("Posição Y da Sobreposição", 0, 1920, 1500)
-            overlay_size = st.slider("Tamanho da Sobreposição", 0.1, 2.0, 0.8, 0.1)
-            overlay_opacity = st.slider("Transparência da Sobreposição", 0.0, 1.0, 1.0, 0.1)
+        with st.expander("Configurações Gerais", expanded=True):
+            total_duration = st.slider("Duração total do Reel (s)", 15, 90, 15)
+            image_duration = st.number_input("Duração de cada imagem (s)", min_value=0.1, value=2.0, step=0.1)
 
-    with st.expander("Opções da Legenda"):
-        if uploaded_captions:
-            caption_y = st.slider("Posição Y da Legenda", 0, 1920, 1700)
-            caption_speed = st.slider("Velocidade da Legenda", 1, 20, 5)
-            caption_fontsize = st.slider("Tamanho da Fonte", 10, 100, 50)
-            caption_color = st.color_picker("Cor da Fonte", "#FFFFFF")
-            font_list = ["Liberation-Sans-Bold", "Arial-Bold", "Courier-New-Bold", "Verdana-Bold"]
-            caption_font = st.selectbox("Fonte da Legenda", font_list)
-            caption_loop = st.checkbox("Habilitar loop na legenda", value=True)
+        with st.expander("Opções da Logo"):
+            if uploaded_logo:
+                logo_x = st.slider("Posição X da Logo", 0, 1080, 50)
+                logo_y = st.slider("Posição Y da Logo", 0, 1920, 50)
+                logo_size = st.slider("Tamanho da Logo", 0.1, 2.0, 0.5, 0.1)
+                logo_opacity = st.slider("Transparência da Logo", 0.0, 1.0, 1.0, 0.1)
 
-    st.header("2. Gerar Vídeo Final")
+        with st.expander("Opções da Sobreposição"):
+            if uploaded_overlay:
+                overlay_x = st.slider("Posição X da Sobreposição", 0, 1080, 800)
+                overlay_y = st.slider("Posição Y da Sobreposição", 0, 1920, 1500)
+                overlay_size = st.slider("Tamanho da Sobreposição", 0.1, 2.0, 0.8, 0.1)
+                overlay_opacity = st.slider("Transparência da Sobreposição", 0.0, 1.0, 1.0, 0.1)
 
-    default_filename = f"reel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
-    final_filename = st.text_input("Nome do arquivo de vídeo:", default_filename)
+        with st.expander("Opções da Legenda"):
+            if uploaded_captions:
+                caption_y = st.slider("Posição Y da Legenda", 0, 1920, 1700)
+                caption_speed = st.slider("Velocidade da Legenda", 1, 20, 5)
+                caption_fontsize = st.slider("Tamanho da Fonte", 10, 100, 50)
+                caption_color = st.color_picker("Cor da Fonte", "#FFFFFF")
+                st.info(f"Fonte da legenda fixada em '{caption_font}'.")
+                caption_loop = st.checkbox("Habilitar loop na legenda", value=True)
+
+    with preview_col:
+        st.header("Preview")
+        if uploaded_images:
+            preview_params = {
+                'logo_x': logo_x if 'logo_x' in locals() else 0,
+                'logo_y': logo_y if 'logo_y' in locals() else 0,
+                'logo_size': logo_size if 'logo_size' in locals() else 0.5,
+                'logo_opacity': logo_opacity if 'logo_opacity' in locals() else 1.0,
+                'overlay_x': overlay_x if 'overlay_x' in locals() else 0,
+                'overlay_y': overlay_y if 'overlay_y' in locals() else 0,
+                'overlay_size': overlay_size if 'overlay_size' in locals() else 0.8,
+                'overlay_opacity': overlay_opacity if 'overlay_opacity' in locals() else 1.0,
+                'caption_y': caption_y if 'caption_y' in locals() else 1700,
+                'caption_fontsize': caption_fontsize if 'caption_fontsize' in locals() else 50,
+                'caption_color': caption_color if 'caption_color' in locals() else '#FFFFFF',
+                'caption_font': caption_font,
+            }
+            with st.spinner("Atualizando preview..."):
+                preview_frame = generate_preview_frame(
+                    uploaded_images[0], uploaded_logo, uploaded_overlay,
+                    uploaded_captions, **preview_params
+                )
+                st.image(preview_frame, caption="Preview da Composição", use_container_width=True)
+        else:
+            st.info("Faça o upload de uma imagem para visualizar o preview.")
+
+# Seção 3: Gerar Vídeo Final
+with st.container():
+    st.header("3. Gerar Vídeo Final")
+
+    if 'final_filename' not in st.session_state:
+        st.session_state.final_filename = f"reel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+
+    st.text_input("Nome do arquivo de vídeo:", key='final_filename')
 
     if st.button("Gerar Vídeo"):
         if not uploaded_images:
             st.error("Por favor, faça o upload de pelo menos uma imagem de fundo.")
-        elif not final_filename.endswith(".mp4"):
+        elif not st.session_state.final_filename.endswith(".mp4"):
             st.error("O nome do arquivo deve terminar com .mp4")
         else:
             with st.spinner("Gerando vídeo... Isso pode levar alguns minutos."):
                 final_video = generate_final_video()
-                
                 if uploaded_audio:
-                    # Usar um nome temporário para o áudio para evitar conflitos
                     temp_audio_path = "temp_audio_for_processing.mp3"
                     with open(temp_audio_path, "wb") as f:
                         f.write(uploaded_audio.getbuffer())
-                    
                     audio_clip = AudioFileClip(temp_audio_path)
                     if audio_clip.duration > final_video.duration:
                         audio_clip = audio_clip.subclip(0, final_video.duration)
-                    
                     final_video = final_video.set_audio(audio_clip)
 
-                final_clip_path = final_filename
+                final_clip_path = st.session_state.final_filename
                 final_video.write_videofile(final_clip_path, fps=24, codec='libx264', audio_codec='aac')
                 
                 st.success("Vídeo gerado com sucesso!")
-                st.video(final_clip_path)
+                # Ajustando o tamanho do player de vídeo final
+                st.video(final_clip_path, width=400)
                 with open(final_clip_path, "rb") as file:
                     st.download_button(
                         label="Baixar Vídeo",
                         data=file,
-                        file_name=final_clip_path, # Usar o nome do arquivo final
+                        file_name=final_clip_path,
                         mime="video/mp4"
                     )
-
-# --- Lógica do Preview na Coluna Lateral ---
-with preview_col:
-    st.header("Preview")
-    
-    # A lógica do preview agora é reativa. Ele será atualizado sempre que um controle for alterado.
-    if uploaded_images:
-        # Coleta os parâmetros atuais dos widgets para passar para a função de preview.
-        # A verificação 'in locals()' evita erros se um arquivo for enviado e depois removido.
-        preview_params = {
-            'logo_x': logo_x if 'logo_x' in locals() else 0,
-            'logo_y': logo_y if 'logo_y' in locals() else 0,
-            'logo_size': logo_size if 'logo_size' in locals() else 0.5,
-            'logo_opacity': logo_opacity if 'logo_opacity' in locals() else 1.0,
-            'overlay_x': overlay_x if 'overlay_x' in locals() else 0,
-            'overlay_y': overlay_y if 'overlay_y' in locals() else 0,
-            'overlay_size': overlay_size if 'overlay_size' in locals() else 0.8,
-            'overlay_opacity': overlay_opacity if 'overlay_opacity' in locals() else 1.0,
-            'caption_y': caption_y if 'caption_y' in locals() else 1700,
-            'caption_fontsize': caption_fontsize if 'caption_fontsize' in locals() else 50,
-            'caption_color': caption_color if 'caption_color' in locals() else '#FFFFFF',
-            'caption_font': caption_font if 'caption_font' in locals() else 'Liberation-Sans-Bold',
-        }
-        
-        with st.spinner("Atualizando preview..."):
-            # Gera e exibe o frame de preview em tempo real
-            preview_frame = generate_preview_frame(
-                uploaded_images[0],
-                uploaded_logo,
-                uploaded_overlay,
-                uploaded_captions,
-                **preview_params
-            )
-            st.image(preview_frame, caption="Preview da Composição", use_container_width=True)
-    else:
-        st.info("Faça o upload de pelo menos uma imagem para visualizar o preview.")
