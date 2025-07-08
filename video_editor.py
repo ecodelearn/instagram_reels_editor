@@ -206,19 +206,28 @@ with controls_col:
             caption_speed = st.slider("Velocidade da Legenda", 1, 20, 5)
             caption_fontsize = st.slider("Tamanho da Fonte", 10, 100, 50)
             caption_color = st.color_picker("Cor da Fonte", "#FFFFFF")
-            font_list = ["Liberation-Sans-Bold", "Arial-Bold", "Courier-New-Bold", "Verdana-Bold"]
-            caption_font = st.selectbox("Fonte da Legenda", font_list)
+            # Removendo a seleção de fonte para evitar erros de fontes não encontradas.
+            # Usando uma fonte fixa que é conhecida por funcionar neste ambiente.
+            caption_font = "Liberation-Sans-Bold"
+            st.info(f"Fonte da legenda foi fixada em '{caption_font}' para garantir a compatibilidade.")
             caption_loop = st.checkbox("Habilitar loop na legenda", value=True)
 
     st.header("2. Gerar Vídeo Final")
 
-    default_filename = f"reel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
-    final_filename = st.text_input("Nome do arquivo de vídeo:", default_filename)
+    # Inicializa o session_state para o nome do arquivo se ele não existir
+    if 'final_filename' not in st.session_state:
+        st.session_state.final_filename = f"reel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+
+    # O valor do input é agora controlado pelo session_state
+    st.text_input(
+        "Nome do arquivo de vídeo:",
+        key='final_filename' # Usar a chave para vincular ao session_state
+    )
 
     if st.button("Gerar Vídeo"):
         if not uploaded_images:
             st.error("Por favor, faça o upload de pelo menos uma imagem de fundo.")
-        elif not final_filename.endswith(".mp4"):
+        elif not st.session_state.final_filename.endswith(".mp4"):
             st.error("O nome do arquivo deve terminar com .mp4")
         else:
             with st.spinner("Gerando vídeo... Isso pode levar alguns minutos."):
@@ -236,7 +245,7 @@ with controls_col:
                     
                     final_video = final_video.set_audio(audio_clip)
 
-                final_clip_path = final_filename
+                final_clip_path = st.session_state.final_filename
                 final_video.write_videofile(final_clip_path, fps=24, codec='libx264', audio_codec='aac')
                 
                 st.success("Vídeo gerado com sucesso!")
