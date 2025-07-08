@@ -6,22 +6,26 @@ import numpy as np
 st.set_page_config(layout="wide")
 st.title("Editor de Vídeo para Reels do Instagram")
 
-# --- Colunas para a Interface ---
-col1, col2 = st.columns([1, 1])
+# --- Layout da Interface ---
+controls_col, preview_col = st.columns([3, 2])
 
-with col1:
-    st.header("1. Arquivos")
-    uploaded_logo = st.file_uploader("Logo (PNG)", type="png")
-    uploaded_overlay = st.file_uploader("Imagem de Sobreposição (PNG)", type="png")
-    uploaded_images = st.file_uploader("Imagens de Fundo (JPG/PNG)", type=["jpg", "png"], accept_multiple_files=True)
-    uploaded_captions = st.file_uploader("Arquivo de Legendas (.txt)", type="txt")
-    uploaded_audio = st.file_uploader("Trilha Sonora (MP3/WAV)", type=["mp3", "wav"])
+with controls_col:
+    st.header("1. Controles")
 
-with col2:
-    st.header("2. Configurações Gerais")
-    total_duration = st.slider("Duração total do Reel (segundos)", 15, 90, 15)
-    image_duration = st.number_input("Duração de cada imagem (segundos)", min_value=0.1, value=2.0, step=0.1)
+    # --- Upload de Arquivos ---
+    with st.expander("Arquivos", expanded=True):
+        uploaded_logo = st.file_uploader("Logo (PNG)", type="png")
+        uploaded_overlay = st.file_uploader("Imagem de Sobreposição (PNG)", type="png")
+        uploaded_images = st.file_uploader("Imagens de Fundo (JPG/PNG)", type=["jpg", "png"], accept_multiple_files=True)
+        uploaded_captions = st.file_uploader("Arquivo de Legendas (.txt)", type="txt")
+        uploaded_audio = st.file_uploader("Trilha Sonora (MP3/WAV)", type=["mp3", "wav"])
 
+    # --- Configurações Gerais ---
+    with st.expander("Configurações Gerais", expanded=True):
+        total_duration = st.slider("Duração total do Reel (segundos)", 15, 90, 15)
+        image_duration = st.number_input("Duração de cada imagem (segundos)", min_value=0.1, value=2.0, step=0.1)
+
+    # --- Opções dos Elementos ---
     with st.expander("Opções da Logo"):
         if uploaded_logo:
             logo_x = st.slider("Posição X da Logo", 0, 1080, 50)
@@ -46,24 +50,54 @@ with col2:
             caption_font = st.selectbox("Fonte da Legenda", font_list)
             caption_loop = st.checkbox("Habilitar loop na legenda", value=True)
 
+    # --- Geração do Vídeo e Download ---
+    st.header("2. Gerar Vídeo Final")
+    if st.button("Gerar Vídeo"):
+        if not uploaded_images:
+            st.error("Por favor, faça o upload de pelo menos uma imagem de fundo.")
+        else:
+            with st.spinner("Gerando vídeo... Isso pode levar alguns minutos."):
+                final_video = generate_final_video()
+                
+                if uploaded_audio:
+                    with open("temp_audio.mp3", "wb") as f:
+                        f.write(uploaded_audio.getbuffer())
+                    
+                    audio_clip = AudioFileClip("temp_audio.mp3")
+                    if audio_clip.duration > final_video.duration:
+                        audio_clip = audio_clip.subclip(0, final_video.duration)
+                    
+                    final_video = final_video.set_audio(audio_clip)
+
+                final_clip_path = "reel_final.mp4"
+                final_video.write_videofile(final_clip_path, fps=24, codec='libx264', audio_codec='aac')
+                
+                st.success("Vídeo gerado com sucesso!")
+                st.video(final_clip_path)
+                with open(final_clip_path, "rb") as file:
+                    st.download_button(
+                        label="Baixar Vídeo",
+                        data=file,
+                        file_name="reel_final.mp4",
+                        mime="video/mp4"
+                    )
 
 # --- Lógica de Geração de Vídeo Refatorada ---
 
-def create_base_clip(images, duration_per_image, total_duration):
+def create_base_clip(images, duration_per_image, total_duration, size=(1080, 1920)):
     """Cria o clipe de vídeo base a partir das imagens, com loop se necessário."""
     if not images:
-        return ColorClip((1080, 1920), color=(0, 0, 0), duration=total_duration)
+        return ColorClip(size, color=(0, 0, 0), duration=total_duration)
     
     clips = []
     for img_file in images:
         img = Image.open(img_file).convert("RGB")
-        # Força o redimensionamento para 1080x1920 (9:16)
-        img_resized = img.resize((1080, 1920), Image.Resampling.LANCZOS)
+        img_resized = img.resize(size, Image.Resampling.LANCZOS)
         clip = ImageClip(np.array(img_resized)).set_duration(duration_per_image)
         clips.append(clip)
     
     if not clips: # Segurança extra
-        return ColorClip((1080, 1920), color=(0, 0, 0), duration=total_duration)
+        return ColorClip(size, color=(0, 0, 0), duration=total_duration)
 
     # Concatena a sequência uma vez para saber a duração
     single_sequence = concatenate_videoclips(clips, method="compose")
@@ -158,58 +192,49 @@ def generate_final_video():
         
     return video
 
-# --- Preview ---
-st.header("3. Pré-visualização da Composição")
-if st.button("Gerar Preview"):
-    if not uploaded_images:
-        st.warning("Faça o upload de pelo menos uma imagem para gerar o preview.")
-    else:
-        with st.spinner("Gerando preview..."):
-            # Usa a primeira imagem para o preview
-            preview_clip = create_base_clip([uploaded_images[0]], 1, 1)
+# --- Lógica do Preview na Coluna Lateral ---
+with preview_col:
+    st.header("Preview")
+    
+    # Placeholder para o preview
+    preview_placeholder = st.empty()
+    preview_placeholder.info("Ajuste as configurações e clique em 'Gerar Preview' para ver o resultado.")
 
-            if uploaded_logo:
-                preview_clip = add_overlay_image(preview_clip, uploaded_logo, logo_x, logo_y, logo_size, logo_opacity)
-            
-            if uploaded_overlay:
-                preview_clip = add_overlay_image(preview_clip, uploaded_overlay, overlay_x, overlay_y, overlay_size, overlay_opacity)
-            
-            if uploaded_captions:
-                preview_clip = add_static_caption_for_preview(preview_clip, uploaded_captions, caption_y, caption_fontsize, caption_color, caption_font)
+    if st.button("Gerar Preview"):
+        if not uploaded_images:
+            st.warning("Faça o upload de pelo menos uma imagem para gerar o preview.")
+        else:
+            with st.spinner("Gerando preview..."):
+                # Resolução do preview (metade da final)
+                PREVIEW_SCALE = 0.5
+                PREVIEW_SIZE = (int(1080 * PREVIEW_SCALE), int(1920 * PREVIEW_SCALE))
 
-            # Extrai o frame e mostra
-            preview_frame = preview_clip.get_frame(0)
-            st.image(preview_frame, caption="Preview da Composição", use_column_width=True)
+                # Usa a primeira imagem para o preview com resolução reduzida
+                preview_clip = create_base_clip([uploaded_images[0]], 1, 1, size=PREVIEW_SIZE)
 
-
-# --- Geração do Vídeo e Download ---
-st.header("4. Gerar Vídeo Final")
-if st.button("Gerar Vídeo"):
-    if not uploaded_images:
-        st.error("Por favor, faça o upload de pelo menos uma imagem de fundo.")
-    else:
-        with st.spinner("Gerando vídeo... Isso pode levar alguns minutos."):
-            final_video = generate_final_video()
-            
-            if uploaded_audio:
-                with open("temp_audio.mp3", "wb") as f:
-                    f.write(uploaded_audio.getbuffer())
+                # Adiciona elementos com posições e tamanhos escalados
+                if uploaded_logo:
+                    preview_clip = add_overlay_image(
+                        preview_clip, uploaded_logo,
+                        int(logo_x * PREVIEW_SCALE), int(logo_y * PREVIEW_SCALE),
+                        logo_size * PREVIEW_SCALE, logo_opacity
+                    )
                 
-                audio_clip = AudioFileClip("temp_audio.mp3")
-                if audio_clip.duration > final_video.duration:
-                    audio_clip = audio_clip.subclip(0, final_video.duration)
+                if uploaded_overlay:
+                    preview_clip = add_overlay_image(
+                        preview_clip, uploaded_overlay,
+                        int(overlay_x * PREVIEW_SCALE), int(overlay_y * PREVIEW_SCALE),
+                        overlay_size * PREVIEW_SCALE, overlay_opacity
+                    )
                 
-                final_video = final_video.set_audio(audio_clip)
+                if uploaded_captions:
+                    preview_clip = add_static_caption_for_preview(
+                        preview_clip, uploaded_captions,
+                        int(caption_y * PREVIEW_SCALE),
+                        int(caption_fontsize * PREVIEW_SCALE),
+                        caption_color, caption_font
+                    )
 
-            final_clip_path = "reel_final.mp4"
-            final_video.write_videofile(final_clip_path, fps=24, codec='libx264', audio_codec='aac')
-            
-            st.success("Vídeo gerado com sucesso!")
-            st.video(final_clip_path)
-            with open(final_clip_path, "rb") as file:
-                st.download_button(
-                    label="Baixar Vídeo",
-                    data=file,
-                    file_name="reel_final.mp4",
-                    mime="video/mp4"
-                )
+                # Extrai o frame e mostra no placeholder
+                preview_frame = preview_clip.get_frame(0)
+                preview_placeholder.image(preview_frame, caption="Preview da Composição", use_column_width=True)
