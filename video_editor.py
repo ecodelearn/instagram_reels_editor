@@ -126,6 +126,48 @@ def generate_final_video():
         
     return video
 
+
+def generate_preview_frame(base_image, logo_file, overlay_file, caption_file, **kwargs):
+    """
+    Gera um único frame de preview com base nos arquivos e configurações fornecidas.
+    Isso permite atualizações reativas na interface.
+    """
+    PREVIEW_SCALE = 0.5
+    PREVIEW_SIZE = (int(1080 * PREVIEW_SCALE), int(1920 * PREVIEW_SCALE))
+
+    # Usa a primeira imagem como base para o preview
+    preview_clip = create_base_clip([base_image], 1, 1, size=PREVIEW_SIZE)
+
+    if logo_file:
+        preview_clip = add_overlay_image(
+            preview_clip, logo_file,
+            int(kwargs.get('logo_x', 0) * PREVIEW_SCALE),
+            int(kwargs.get('logo_y', 0) * PREVIEW_SCALE),
+            kwargs.get('logo_size', 0.5) * PREVIEW_SCALE,
+            kwargs.get('logo_opacity', 1.0)
+        )
+    
+    if overlay_file:
+        preview_clip = add_overlay_image(
+            preview_clip, overlay_file,
+            int(kwargs.get('overlay_x', 0) * PREVIEW_SCALE),
+            int(kwargs.get('overlay_y', 0) * PREVIEW_SCALE),
+            kwargs.get('overlay_size', 0.8) * PREVIEW_SCALE,
+            kwargs.get('overlay_opacity', 1.0)
+        )
+    
+    if caption_file:
+        preview_clip = add_static_caption_for_preview(
+            preview_clip, caption_file,
+            int(kwargs.get('caption_y', 1700) * PREVIEW_SCALE),
+            int(kwargs.get('caption_fontsize', 50) * PREVIEW_SCALE),
+            kwargs.get('caption_color', '#FFFFFF'),
+            kwargs.get('caption_font', 'Liberation-Sans-Bold')
+        )
+
+    return preview_clip.get_frame(0)
+
+
 # --- Layout da Interface ---
 controls_col, preview_col = st.columns([3, 2])
 
@@ -211,40 +253,34 @@ with controls_col:
 with preview_col:
     st.header("Preview")
     
-    preview_placeholder = st.empty()
-    preview_placeholder.info("Ajuste as configurações e clique em 'Gerar Preview' para ver o resultado.")
-
-    if st.button("Gerar Preview"):
-        if not uploaded_images:
-            st.warning("Faça o upload de pelo menos uma imagem para gerar o preview.")
-        else:
-            with st.spinner("Gerando preview..."):
-                PREVIEW_SCALE = 0.5
-                PREVIEW_SIZE = (int(1080 * PREVIEW_SCALE), int(1920 * PREVIEW_SCALE))
-
-                preview_clip = create_base_clip([uploaded_images[0]], 1, 1, size=PREVIEW_SIZE)
-
-                if uploaded_logo:
-                    preview_clip = add_overlay_image(
-                        preview_clip, uploaded_logo,
-                        int(logo_x * PREVIEW_SCALE), int(logo_y * PREVIEW_SCALE),
-                        logo_size * PREVIEW_SCALE, logo_opacity
-                    )
-                
-                if uploaded_overlay:
-                    preview_clip = add_overlay_image(
-                        preview_clip, uploaded_overlay,
-                        int(overlay_x * PREVIEW_SCALE), int(overlay_y * PREVIEW_SCALE),
-                        overlay_size * PREVIEW_SCALE, overlay_opacity
-                    )
-                
-                if uploaded_captions:
-                    preview_clip = add_static_caption_for_preview(
-                        preview_clip, uploaded_captions,
-                        int(caption_y * PREVIEW_SCALE),
-                        int(caption_fontsize * PREVIEW_SCALE),
-                        caption_color, caption_font
-                    )
-
-                preview_frame = preview_clip.get_frame(0)
-                preview_placeholder.image(preview_frame, caption="Preview da Composição", use_container_width=True)
+    # A lógica do preview agora é reativa. Ele será atualizado sempre que um controle for alterado.
+    if uploaded_images:
+        # Coleta os parâmetros atuais dos widgets para passar para a função de preview.
+        # A verificação 'in locals()' evita erros se um arquivo for enviado e depois removido.
+        preview_params = {
+            'logo_x': logo_x if 'logo_x' in locals() else 0,
+            'logo_y': logo_y if 'logo_y' in locals() else 0,
+            'logo_size': logo_size if 'logo_size' in locals() else 0.5,
+            'logo_opacity': logo_opacity if 'logo_opacity' in locals() else 1.0,
+            'overlay_x': overlay_x if 'overlay_x' in locals() else 0,
+            'overlay_y': overlay_y if 'overlay_y' in locals() else 0,
+            'overlay_size': overlay_size if 'overlay_size' in locals() else 0.8,
+            'overlay_opacity': overlay_opacity if 'overlay_opacity' in locals() else 1.0,
+            'caption_y': caption_y if 'caption_y' in locals() else 1700,
+            'caption_fontsize': caption_fontsize if 'caption_fontsize' in locals() else 50,
+            'caption_color': caption_color if 'caption_color' in locals() else '#FFFFFF',
+            'caption_font': caption_font if 'caption_font' in locals() else 'Liberation-Sans-Bold',
+        }
+        
+        with st.spinner("Atualizando preview..."):
+            # Gera e exibe o frame de preview em tempo real
+            preview_frame = generate_preview_frame(
+                uploaded_images[0],
+                uploaded_logo,
+                uploaded_overlay,
+                uploaded_captions,
+                **preview_params
+            )
+            st.image(preview_frame, caption="Preview da Composição", use_container_width=True)
+    else:
+        st.info("Faça o upload de pelo menos uma imagem para visualizar o preview.")
