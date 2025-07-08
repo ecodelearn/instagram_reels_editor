@@ -3,6 +3,7 @@ from moviepy.editor import *
 from PIL import Image
 import numpy as np
 import re
+from datetime import datetime
 
 st.set_page_config(layout="wide")
 st.title("Editor de Vídeo para Reels do Instagram")
@@ -168,24 +169,32 @@ with controls_col:
             caption_loop = st.checkbox("Habilitar loop na legenda", value=True)
 
     st.header("2. Gerar Vídeo Final")
+
+    default_filename = f"reel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+    final_filename = st.text_input("Nome do arquivo de vídeo:", default_filename)
+
     if st.button("Gerar Vídeo"):
         if not uploaded_images:
             st.error("Por favor, faça o upload de pelo menos uma imagem de fundo.")
+        elif not final_filename.endswith(".mp4"):
+            st.error("O nome do arquivo deve terminar com .mp4")
         else:
             with st.spinner("Gerando vídeo... Isso pode levar alguns minutos."):
                 final_video = generate_final_video()
                 
                 if uploaded_audio:
-                    with open("temp_audio.mp3", "wb") as f:
+                    # Usar um nome temporário para o áudio para evitar conflitos
+                    temp_audio_path = "temp_audio_for_processing.mp3"
+                    with open(temp_audio_path, "wb") as f:
                         f.write(uploaded_audio.getbuffer())
                     
-                    audio_clip = AudioFileClip("temp_audio.mp3")
+                    audio_clip = AudioFileClip(temp_audio_path)
                     if audio_clip.duration > final_video.duration:
                         audio_clip = audio_clip.subclip(0, final_video.duration)
                     
                     final_video = final_video.set_audio(audio_clip)
 
-                final_clip_path = "reel_final.mp4"
+                final_clip_path = final_filename
                 final_video.write_videofile(final_clip_path, fps=24, codec='libx264', audio_codec='aac')
                 
                 st.success("Vídeo gerado com sucesso!")
@@ -194,7 +203,7 @@ with controls_col:
                     st.download_button(
                         label="Baixar Vídeo",
                         data=file,
-                        file_name="reel_final.mp4",
+                        file_name=final_clip_path, # Usar o nome do arquivo final
                         mime="video/mp4"
                     )
 
