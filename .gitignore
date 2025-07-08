@@ -1,2 +1,19 @@
-# Ignorar o ambiente virtual do Python
+# Ambiente Virtual
 .venv/
+venv/
+env/
+
+# Cache e Bytecode do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos gerados pela aplicação
+reel_final.mp4
+temp_audio.mp3
+*.log
+
+# Configurações de IDE
+.vscode/
+.idea/
