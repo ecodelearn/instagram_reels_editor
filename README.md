@@ -6,37 +6,39 @@ Esta é uma aplicação web desenvolvida com Streamlit que permite a criação r
 
 ## 🌊 Fluxo de Uso
 
-O diagrama abaixo ilustra o fluxo de trabalho da aplicação, desde o upload dos arquivos até a geração do vídeo final.
+A interface é dividida em duas seções principais: à esquerda, os controles para upload e personalização; à direita, um preview que é atualizado em tempo real.
 
 ```mermaid
 graph TD
-    A[Início] --> B{Upload de Arquivos};
-    B --> B1[Logo .png];
-    B --> B2[Sobreposição .png];
-    B --> B3[Imagens de Fundo .jpg/.png];
-    B --> B4[Legendas .txt];
-    B --> B5[Áudio .mp3/.wav];
-
-    B --> C{Configurações};
-    C --> C1[Duração do Vídeo];
-    C --> C2[Duração das Imagens];
-    C --> C3[Ajustes da Logo];
-    C --> C4[Ajustes da Sobreposição];
-    C --> C5[Ajustes da Legenda];
-
-    C --> D[Gerar Preview];
-    D --> E[Visualizar Frame Estático];
-
-    C --> F[Gerar Vídeo Final];
-    F --> G{Processamento};
-    G --> G1[Cria clipe base com imagens];
-    G --> G2[Adiciona logo e sobreposição];
-    G --> G3[Adiciona legendas animadas];
-    G --> G4[Adiciona trilha sonora];
-
-    G --> H[Vídeo Pronto];
-    H --> I[Exibir no App];
-    H --> J[Baixar .mp4];
+    subgraph "Tela da Aplicação"
+        direction LR
+        subgraph "Coluna de Controles (Esquerda)"
+            A[Upload de Arquivos] --> B & C & D & E
+            A---
+            B(Imagens de Fundo)
+            C(Logo)
+            D(Legendas)
+            E(Áudio)
+            ---
+            F[Configurações Gerais]
+            F---
+            G[Ajustes da Logo]
+            G---
+            H[Ajustes da Sobreposição]
+            H---
+            I[Ajustes da Legenda]
+            I---
+            J[Gerar Vídeo Final] --> K & L
+            K(Nome do Arquivo)
+            L(Botão 'Gerar Vídeo')
+        end
+        subgraph "Coluna de Visualização (Direita)"
+            P[📺 Preview Reativo]
+            P -- Atualiza com alterações em --> G
+            P -- Atualiza com alterações em --> H
+            P -- Atualiza com alterações em --> I
+        end
+    end
 ```
 
 ## ✨ Funcionalidades
@@ -44,7 +46,8 @@ graph TD
 -   **Upload de Múltiplos Arquivos:**
     -   Logo da marca (PNG).
     -   Imagem de sobreposição (PNG).
-    -   Múltiplas imagens de fundo (JPG/PNG) para compor o vídeo.
+    -   Múltiplas imagens de fundo (JPG/PNG).
+        -   **Ordenação Automática:** As imagens são ordenadas numericamente com base em seus nomes (ex: `01-foto.jpg`, `02-foto.jpg`, ...), garantindo a sequência correta no vídeo.
     -   Arquivo de texto (`.txt`) para as legendas.
     -   Trilha sonora (MP3/WAV).
 -   **Configurações Gerais do Vídeo:**
@@ -57,9 +60,10 @@ graph TD
         -   Efeito de letreiro (scrolling text).
         -   Opção de loop para a animação da legenda.
         -   Controle de posição (Y), velocidade, tamanho da fonte, cor e tipo da fonte.
--   **Preview Rápido:**
-    -   Gere uma pré-visualização estática (um frame) da composição dos elementos visuais antes de renderizar o vídeo completo.
+-   **Preview Reativo e Instantâneo:**
+    -   Visualize as alterações em tempo real. A área de preview é atualizada automaticamente sempre que um controle (como a posição ou o tamanho da logo) é ajustado, fornecendo feedback visual imediato sem a necessidade de clicar em um botão.
 -   **Geração e Download:**
+    -   **Nome de Arquivo Personalizado:** Escolha o nome do arquivo de vídeo final. Um nome padrão com data e hora é sugerido para facilitar.
     -   Renderização do vídeo final em formato `.mp4`.
     -   Incorporação da trilha sonora, ajustada à duração do vídeo.
     -   Opção para baixar o vídeo diretamente pela interface.
@@ -85,8 +89,8 @@ Siga os passos abaixo para configurar e executar a aplicação em seu ambiente l
 
 **Clone o repositório (se aplicável):**
 ```bash
-git clone <URL_DO_REPOSITORIO>
-cd <NOME_DA_PASTA>
+git clone https://github.com/ecodelearn/instagram_reels_editor.git
+cd instagram_reels_editor
 ```
 
 **Crie e ative o ambiente virtual:**
