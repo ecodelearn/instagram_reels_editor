@@ -2,9 +2,27 @@ import streamlit as st
 from moviepy.editor import *
 from PIL import Image
 import numpy as np
+import re
 
 st.set_page_config(layout="wide")
 st.title("Editor de Vídeo para Reels do Instagram")
+
+def sort_images_numerically(files):
+    """Ordena uma lista de arquivos com base em um número no início do nome."""
+    if not files:
+        return []
+    
+    def get_number(file):
+        # Extrai o número do início do nome do arquivo para usar como chave de ordenação.
+        match = re.match(r'(\d+)', file.name)
+        if match:
+            return int(match.group(1))
+        # Retorna um número muito grande para arquivos sem prefixo numérico,
+        # garantindo que eles fiquem no final da lista.
+        return float('inf')
+
+    return sorted(files, key=get_number)
+
 
 # --- Lógica de Geração de Vídeo ---
 
@@ -116,7 +134,8 @@ with controls_col:
     with st.expander("Arquivos", expanded=True):
         uploaded_logo = st.file_uploader("Logo (PNG)", type="png")
         uploaded_overlay = st.file_uploader("Imagem de Sobreposição (PNG)", type="png")
-        uploaded_images = st.file_uploader("Imagens de Fundo (JPG/PNG)", type=["jpg", "png"], accept_multiple_files=True)
+        uploaded_images_raw = st.file_uploader("Imagens de Fundo (JPG/PNG)", type=["jpg", "png"], accept_multiple_files=True)
+        uploaded_images = sort_images_numerically(uploaded_images_raw)
         uploaded_captions = st.file_uploader("Arquivo de Legendas (.txt)", type="txt")
         uploaded_audio = st.file_uploader("Trilha Sonora (MP3/WAV)", type=["mp3", "wav"])
 
