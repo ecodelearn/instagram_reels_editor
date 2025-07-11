@@ -12,6 +12,7 @@ __pycache__/
 # Arquivos gerados pela aplicação
 reel_final.mp4
 temp_audio.mp3
+*.mp4
 *.log
 
 # Configurações de IDE
